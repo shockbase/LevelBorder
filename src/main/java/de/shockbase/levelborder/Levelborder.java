@@ -1,0 +1,206 @@
+package de.shockbase.levelborder;
+
+import com.github.yannicklamprecht.worldborder.api.*;
+import com.google.common.collect.Maps;
+import de.shockbase.levelborder.commands.LevelBorderCommands;
+import de.shockbase.levelborder.config.PlayerConfig;
+import de.shockbase.levelborder.timer.Timer;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.title.Title;
+import org.bukkit.*;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerLevelChangeEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+
+public final class Levelborder extends JavaPlugin implements Listener {
+
+    private final Map<UUID, Timer> timers = Maps.newHashMap();
+    private WorldBorderApi worldBorderApi;
+
+    public static JavaPlugin getInstance() {
+        return (JavaPlugin) Bukkit.getPluginManager().getPlugin("Levelborder");
+    }
+
+    @Override
+    public void onEnable() {
+        // Plugin startup logic
+        saveConfig();
+
+        //commands
+        Objects.requireNonNull(getCommand("lb")).setExecutor(new LevelBorderCommands());
+
+        RegisteredServiceProvider<WorldBorderApi> worldBorderApiRegisteredServiceProvider = getServer().getServicesManager().getRegistration(WorldBorderApi.class);
+
+        if (worldBorderApiRegisteredServiceProvider == null) {
+            getLogger().info("[LevelBorder] WorldBorderAPI not found!");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
+        this.worldBorderApi = worldBorderApiRegisteredServiceProvider.getProvider();
+        getServer().getPluginManager().registerEvents(this, this);
+        World world = getServer().getWorld("world");
+        Objects.requireNonNull(world).setGameRule(GameRule.SPECTATORS_GENERATE_CHUNKS, false);
+        Objects.requireNonNull(world).setGameRule(GameRule.SPAWN_RADIUS, 1000000);
+    }
+
+    @Override
+    public void onDisable() {
+        // Plugin shutdown logic
+        saveConfig();
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+
+        PlayerConfig.setup(player);
+        PlayerConfig.getPlayerConfig().addDefault("borderCenter", player.getLocation());
+        PlayerConfig.getPlayerConfig().addDefault("minBorderRadius", 5);
+        PlayerConfig.getPlayerConfig().addDefault("elapsedTime", 0);
+        PlayerConfig.getPlayerConfig().addDefault("growSpawnTree", true);
+        PlayerConfig.getPlayerConfig().addDefault("spawnTreeGrown", false);
+        PlayerConfig.getPlayerConfig().addDefault("startTime", System.currentTimeMillis() / 1000);
+        PlayerConfig.getPlayerConfig().addDefault("dead", false);
+        PlayerConfig.getPlayerConfig().addDefault("level", player.getLevel());
+        PlayerConfig.getPlayerConfig().options().copyDefaults(true);
+        PlayerConfig.save();
+
+        Timer timer = new Timer();
+        timer.setElapsedTime(PlayerConfig.getPlayerConfig().getInt("elapsedTime"));
+        timer.start(player);
+
+        if (PlayerConfig.getPlayerConfig().getBoolean("dead")) {
+            player.setGameMode(GameMode.SPECTATOR);
+            timer.pause();
+        } else {
+
+            setWorldBorder(player, PlayerConfig.getPlayerConfig().getLocation("borderCenter"));
+
+            if (PlayerConfig.getPlayerConfig().getBoolean("growSpawnTree") && !PlayerConfig.getPlayerConfig().getBoolean("spawnTreeGrown")) {
+                if (generateSpawnTree(player)) {
+                    PlayerConfig.getPlayerConfig().set("spawnTreeGrown", true);
+                    PlayerConfig.getPlayerConfig().set("borderCenter", player.getLocation());
+                    PlayerConfig.save();
+                }
+            }
+        }
+
+        this.timers.put(player.getUniqueId(), timer);
+        showPlayerGreetings(player);
+    }
+
+    @EventHandler
+    public void onPlayerLevelChangeEvent(PlayerLevelChangeEvent event) {
+        Player player = event.getPlayer();
+        int minBorderRadius = PlayerConfig.getPlayerConfig().getInt("minBorderRadius");
+        changeWorldBorder(player, event.getOldLevel() * 2 + minBorderRadius, event.getNewLevel() * 2 + minBorderRadius);
+        PlayerConfig.getPlayerConfig().set("level", event.getNewLevel());
+        PlayerConfig.save();
+    }
+
+    @EventHandler
+    public void onPlayerDeathEvent(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        player.setGameMode(GameMode.SPECTATOR);
+        PlayerConfig.getPlayerConfig().set("dead", true);
+        PlayerConfig.save();
+        Timer timer = timers.get(player.getUniqueId());
+        timer.pause();
+        removeWorldBorder(player);
+    }
+
+    @EventHandler
+    public void onPlayerQuitEvent(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        Timer timer = timers.get(player.getUniqueId());
+        PlayerConfig.getPlayerConfig().set("elapsedTime", timer.getElapsedTime());
+        PlayerConfig.save();
+        timer.stop();
+    }
+
+    @EventHandler
+    public void onPlayerRespawnEvent(PlayerRespawnEvent event) {
+        Player player = event.getPlayer();
+        showRestartInfo(player);
+    }
+
+    private void setWorldBorder(Player player, @Nullable Location playerBorderCenter) {
+        if (this.worldBorderApi instanceof PersistentWorldBorderApi) {
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                PersistentWorldBorderApi persistentWorldBorderApi = ((PersistentWorldBorderApi) worldBorderApi);
+                WorldBorderData worldBorderData = persistentWorldBorderApi.getWorldBorderData(player);
+                if (worldBorderData != null) {
+                    IWorldBorder worldBorder = worldBorderApi.getWorldBorder(player);
+                    worldBorderData.applyAll(worldBorder);
+                    worldBorder.send(player, WorldBorderAction.INITIALIZE);
+                }
+            }, 20);
+        }
+        this.worldBorderApi.setBorder(player, player.getLevel() * 2 + PlayerConfig.getPlayerConfig().getInt("minBorderRadius"), playerBorderCenter);
+    }
+
+    private void removeWorldBorder(Player player) {
+        this.worldBorderApi.resetWorldBorderToGlobal(player);
+    }
+
+    private void changeWorldBorder(Player player, int oldWorldSize, int newWorldSize) {
+        IWorldBorder iWorldBorder = this.worldBorderApi.getWorldBorder(player);
+        iWorldBorder.lerp(oldWorldSize, newWorldSize, 500);
+        iWorldBorder.send(player, WorldBorderAction.LERP_SIZE);
+    }
+
+    private void showPlayerGreetings(Player player) {
+        Title title;
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            showRestartInfo(player);
+        } else {
+            if (player.hasPlayedBefore()) {
+                title = Title.title(
+                        Component.text(ChatColor.GOLD + "Welcome back, " + "" + ChatColor.BOLD + player.getName() + "!"),
+                        Component.text(ChatColor.AQUA + "Your world will expand according to your exp level." + ChatColor.BOLD + " Good luck!")
+                );
+            } else {
+                title = Title.title(
+                        Component.text(ChatColor.GOLD + "Welcome, " + "" + ChatColor.BOLD + player.getName() + "!"),
+                        Component.text(ChatColor.AQUA + "Your world will expand according to your exp level." + ChatColor.BOLD + " Good luck!")
+                );
+            }
+            player.showTitle(title);
+        }
+    }
+
+    private void showRestartInfo(Player player) {
+        Title title;
+        title = Title.title(
+                Component.text(ChatColor.GOLD + "Welcome back, " + "" + ChatColor.BOLD + player.getName() + "!"),
+                Component.text(ChatColor.RED + "You are in SPECTATOR mode. Enjoy the show!")
+        );
+        player.showTitle(title);
+        player.sendMessage(Component.text(ChatColor.RED + "Type " + ChatColor.RESET + "" + ChatColor.ITALIC + "" + ChatColor.BOLD + "/lb reset" + ChatColor.RESET + "" + ChatColor.RED + " to try again."));
+    }
+
+    private boolean generateSpawnTree(Player player) {
+        Block blockUnderPlayer = player.getWorld().getBlockAt(player.getLocation().subtract(0, 1, 0));
+        blockUnderPlayer.setType(Material.DIRT);
+        player.teleport(player.getLocation().add(0, 100, 0));
+        boolean spawnTreeGrown = player.getWorld().generateTree(blockUnderPlayer.getLocation().add(0, 1, 0), TreeType.TREE);
+        Location playerLocation = blockUnderPlayer.getLocation().toHighestLocation().add(0.5, 1, 0.5);
+        player.teleport(playerLocation);
+        player.setBedSpawnLocation(playerLocation, true);
+        return spawnTreeGrown;
+    }
+}

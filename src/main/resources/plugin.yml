@@ -1,0 +1,8 @@
+name: Levelborder
+version: '${project.version}'
+main: de.shockbase.levelborder.Levelborder
+api-version: 1.17
+depend: [ CoreProtect, WorldBorderAPI ]
+authors: [ shockbase ]
+description: World size depends on player level
+website: https://shockbase.de
