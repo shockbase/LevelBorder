@@ -6,3 +6,7 @@ depend: [ CoreProtect, WorldBorderAPI ]
 authors: [ shockbase ]
 description: World size depends on player level
 website: https://shockbase.de
+commands:
+  lb:
+    description: 'LevelBorder command'
+    usage: '/lb reset'
