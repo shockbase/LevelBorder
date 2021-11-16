@@ -8,3 +8,5 @@ World size depends on player level. You will start with a 5x5 world border and a
 ## dependencies:
 - https://github.com/yannicklamprecht/WorldBorderAPI
 - https://github.com/PlayPro/CoreProtect
+
+[![Java CI with Maven](https://github.com/ooehme/LevelBorder/actions/workflows/maven.yml/badge.svg?branch=1.17)](https://github.com/ooehme/LevelBorder/actions/workflows/maven.yml)
