@@ -8,5 +8,5 @@ description: World size depends on player level
 website: https://shockbase.de
 commands:
   lb:
-    description: 'LevelBorder command'
+    description: '/lb reset will kick you and delete all your data from this server!'
     usage: '/lb reset'
