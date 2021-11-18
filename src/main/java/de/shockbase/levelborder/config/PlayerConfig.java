@@ -57,8 +57,10 @@ public class PlayerConfig {
 
         long startTime = PlayerConfig.getPlayerConfig().getLong("startTime");
         Location origin = PlayerConfig.getPlayerConfig().getLocation("borderCenter");
-        int radius = PlayerConfig.getPlayerConfig().getInt("level") / 16 + 2;
+        int minBorderRadius = PlayerConfig.getPlayerConfig().getInt("minBorderRadius");
+        int level = PlayerConfig.getPlayerConfig().getInt("level");
 
+        int radius = minBorderRadius + level;
         long currentTime = System.currentTimeMillis() / 1000;
         int time = (int) (currentTime - startTime) + 10;
 
