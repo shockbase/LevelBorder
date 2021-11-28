@@ -13,10 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerLevelChangeEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
@@ -76,6 +73,7 @@ public final class Levelborder extends JavaPlugin implements Listener {
         PlayerConfig.getPlayerConfig().addDefault("startTime", System.currentTimeMillis() / 1000);
         PlayerConfig.getPlayerConfig().addDefault("dead", false);
         PlayerConfig.getPlayerConfig().addDefault("level", player.getLevel());
+        PlayerConfig.getPlayerConfig().addDefault("overWorldName", player.getWorld().getName());
         PlayerConfig.getPlayerConfig().options().copyDefaults(true);
         PlayerConfig.save();
 
@@ -136,6 +134,45 @@ public final class Levelborder extends JavaPlugin implements Listener {
     public void onPlayerRespawnEvent(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
         showRestartInfo(player);
+    }
+
+    @EventHandler
+    public void onPlayerChangedWorldEvent(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        String worldName = player.getWorld().getName();
+
+        if (worldName.equalsIgnoreCase(PlayerConfig.getPlayerConfig().getString("overWorldName"))) {
+            setWorldBorder(player, PlayerConfig.getPlayerConfig().getLocation("borderCenter"));
+        }
+
+        if (worldName.equals(PlayerConfig.getPlayerConfig().getString("netherWorldName"))) {
+            PlayerConfig.getPlayerConfig().addDefault("netherSpawnLocation", player.getLocation());
+            setWorldBorder(player, PlayerConfig.getPlayerConfig().getLocation("netherSpawnLocation"));
+        }
+
+        if (worldName.equals(PlayerConfig.getPlayerConfig().getString("endWorldName"))) {
+            PlayerConfig.getPlayerConfig().addDefault("endSpawnLocation", player.getLocation());
+            setWorldBorder(player, PlayerConfig.getPlayerConfig().getLocation("endSpawnLocation"));
+        }
+    }
+
+    @EventHandler
+    public void onPlayerPortalEvent(PlayerPortalEvent event) {
+        Player player = event.getPlayer();
+        Location fromWorld = event.getFrom();
+        Location toWorld = event.getTo();
+
+        if (toWorld.getWorld().getName().endsWith("_nether")) {
+            PlayerConfig.getPlayerConfig().addDefault("netherWorldName", toWorld.getWorld().getName());
+            PlayerConfig.save();
+        }
+
+        if (toWorld.getWorld().getName().endsWith("_the_end")) {
+            PlayerConfig.getPlayerConfig().addDefault("endWorldName", toWorld.getWorld().getName());
+            PlayerConfig.save();
+        }
+
+        Bukkit.getLogger().info(player.getName() + " enters " + toWorld.getWorld().getName() + " at " + toWorld + " from " + fromWorld.getWorld().getName());
     }
 
     private void setWorldBorder(Player player, @Nullable Location playerBorderCenter) {
