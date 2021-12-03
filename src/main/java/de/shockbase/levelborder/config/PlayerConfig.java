@@ -66,19 +66,18 @@ public class PlayerConfig {
         long currentTime = System.currentTimeMillis() / 1000;
         int time = (int) (currentTime - startTime) + 10;
 
+        List<Object> exclude = getLivingEntitiesTypesList();
+
         if (worldOrigin != null) {
-            List<Object> exclude = getlivingEntitiesTypesList();
-            //resetChunksByOrigin(worldOrigin, radius, time, exclude);
+            resetChunksByOrigin(worldOrigin, radius, time, exclude);
         }
 
         if (netherOrigin != null) {
-            List<Object> exclude = getlivingEntitiesTypesList();
-            //resetChunksByOrigin(netherOrigin, radius, time, exclude);
+            resetChunksByOrigin(netherOrigin, radius, time, exclude);
         }
 
         if (endOrigin != null) {
-            List<Object> exclude = getlivingEntitiesTypesList();
-            //resetChunksByOrigin(endOrigin, radius, time, exclude);
+            resetChunksByOrigin(endOrigin, radius, time, exclude);
         }
 
         deleteFile(plugin.getDataFolder().getPath(), player.getUniqueId() + ".yml", playerName + " configuration deleted");
@@ -133,7 +132,7 @@ public class PlayerConfig {
         return CoreProtect;
     }
 
-    private static List<Object> getlivingEntitiesTypesList() {
+    private static List<Object> getLivingEntitiesTypesList() {
         List<Object> list = new ArrayList<>();
         //A
         list.add(EntityType.AXOLOTL);
