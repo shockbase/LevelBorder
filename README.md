@@ -15,4 +15,4 @@ World size depends on player level. You will start with a 5x5 world border and a
 - https://papermc.io/
 
 ## 
-[![Java CI with Maven](https://github.com/ooehme/LevelBorder/actions/workflows/maven.yml/badge.svg?branch=1.17)](https://github.com/ooehme/LevelBorder/actions/workflows/maven.yml)
+[![Java CI with Maven](https://github.com/ooehme/LevelBorder/actions/workflows/maven.yml/badge.svg?branch=1.18)](https://github.com/ooehme/LevelBorder/actions/workflows/maven.yml)
