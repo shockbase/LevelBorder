@@ -70,10 +70,10 @@
             <id>playpro-repo</id>
             <url>https://maven.playpro.com/</url>
         </repository>
-        <!--repository>
+        <repository>
             <id>eldonexus</id>
             <url>https://eldonexus.de/repository/maven-releases/</url>
-        </repository-->
+        </repository>
     </repositories>
 
     <dependencies>
@@ -89,11 +89,11 @@
             <version>20.1</version>
             <scope>provided</scope>
         </dependency>
-        <!--dependency>
-            <groupId>com.github.yannicklamprecht.worldborderapi</groupId>
-            <artifactId>api</artifactId>
-            <version>1.170.0</version>
+        <dependency>
+            <groupId>com.github.yannicklamprecht</groupId>
+            <artifactId>worldborderapi</artifactId>
+            <version>1.180.0</version>
             <scope>provided</scope>
-        </dependency-->
+        </dependency>
     </dependencies>
 </project>
