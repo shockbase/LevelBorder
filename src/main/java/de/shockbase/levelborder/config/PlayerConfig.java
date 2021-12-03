@@ -68,17 +68,17 @@ public class PlayerConfig {
 
         if (worldOrigin != null) {
             List<Object> exclude = getlivingEntitiesTypesList();
-            resetChunksByOrigin(worldOrigin, radius, time, exclude);
+            //resetChunksByOrigin(worldOrigin, radius, time, exclude);
         }
 
         if (netherOrigin != null) {
             List<Object> exclude = getlivingEntitiesTypesList();
-            resetChunksByOrigin(netherOrigin, radius, time, exclude);
+            //resetChunksByOrigin(netherOrigin, radius, time, exclude);
         }
 
         if (endOrigin != null) {
             List<Object> exclude = getlivingEntitiesTypesList();
-            resetChunksByOrigin(endOrigin, radius, time, exclude);
+            //resetChunksByOrigin(endOrigin, radius, time, exclude);
         }
 
         deleteFile(plugin.getDataFolder().getPath(), player.getUniqueId() + ".yml", playerName + " configuration deleted");
